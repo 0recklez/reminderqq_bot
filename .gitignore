@@ -1,0 +1,37 @@
+### PyCharm ###
+.idea/
+*.iml
+*.ipr
+*.iws
+.idea_modules/
+
+### Virtual Environment ###
+.venv/
+venv/
+env/
+
+### Environment Variables ###
+.env
+*.env
+
+### Python Cache ###
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+### Logs and Databases ###
+*.log
+*.sqlite
+*.db
+
+### Local Development ###
+*.local
+*.bak
+*.tmp
+
+### OS Files ###
+.DS_Store
+Thumbs.db
+
+### Example Env (keep this!) ###
+!.env.example
