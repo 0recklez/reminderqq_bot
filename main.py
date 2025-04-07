@@ -1,14 +1,15 @@
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
 from aiogram.types import KeyboardButton, Message
-
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from datetime import datetime
+from config import Config, load_config
 
-BOT_TOKEN = '7947857412:AAGtbvae1SSlwZWYX97kUJ0JAbkN6t05-0E'
+config: Config = load_config()
+BOT_TOKEN: str = config.tg_bot.token
+
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 button_add = KeyboardButton(text='Добавить задачу ➕')
