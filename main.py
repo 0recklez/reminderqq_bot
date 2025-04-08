@@ -4,7 +4,7 @@ from aiogram.types import KeyboardButton, Message
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
-from datetime import datetime
+from datetime import datetime, timedelta
 from config import Config, load_config
 
 config: Config = load_config()
@@ -58,12 +58,13 @@ async def process_answer_task(message: Message, state: FSMContext):
 @dp.message(DialogState.add_task)
 async def process_add_task(message: Message, state: FSMContext):
     user_id = str(message.chat.id)
+    current_time = datetime.now() + timedelta(hours=3)
     if user_id not in tasks:
         tasks[user_id] = []
     new_task = {
         "id": len(tasks[user_id]) + 1,
         "text": str(message.text),
-        "time": datetime.now().strftime("%d.%m.%Y %H:%M")
+        "time": current_time.strftime("%d.%m.%Y %H:%M")
     }
     tasks[str(user_id)].append(new_task)
     await state.clear()
