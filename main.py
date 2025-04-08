@@ -58,7 +58,7 @@ async def process_answer_task(message: Message, state: FSMContext):
 @dp.message(DialogState.add_task)
 async def process_add_task(message: Message, state: FSMContext):
     user_id = str(message.chat.id)
-    current_time = datetime.now() + timedelta(hours=3)
+    current_time = datetime.now() + timedelta(hours=5)
     if user_id not in tasks:
         tasks[user_id] = []
     new_task = {
