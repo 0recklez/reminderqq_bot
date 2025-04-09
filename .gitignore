@@ -33,5 +33,7 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
+main_mypc.py
+
 ### Example Env (keep this!) ###
 !.env.example

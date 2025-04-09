@@ -5,6 +5,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from datetime import datetime, timedelta
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.date import DateTrigger
+from apscheduler.jobstores.memory import MemoryJobStore
 from config import Config, load_config
 
 config: Config = load_config()
@@ -12,6 +15,9 @@ BOT_TOKEN: str = config.tg_bot.token
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
+
+scheduler = AsyncIOScheduler()
+
 button_add = KeyboardButton(text='Добавить задачу ➕')
 button_delete = KeyboardButton(text='Удалить задачу ❌')
 button_list = KeyboardButton(text='Мои задачи 📋')
@@ -19,14 +25,24 @@ button_list = KeyboardButton(text='Мои задачи 📋')
 kb_builder = ReplyKeyboardBuilder()
 kb_builder.row(button_add, button_delete, button_list, width=2)
 
+tasks = {}
+
 
 class DialogState(StatesGroup):
-    add_task = State()
+    add_task_text = State()
     add_task_time = State()
     delete_task = State()
 
 
-tasks = {}
+async def send_reminder(user_id: int, task_text: str):
+    await bot.send_message(
+        chat_id=user_id,
+        text=f"🔔 Напоминание!\n\nЗадача: {task_text}"
+    )
+
+
+async def on_startup():
+    scheduler.start()
 
 
 @dp.message(CommandStart())
@@ -51,27 +67,50 @@ async def process_command_start(message: Message):
 
 @dp.message(F.text == 'Добавить задачу ➕')
 async def process_answer_task(message: Message, state: FSMContext):
-    await state.set_state(DialogState.add_task)
+    await state.set_state(DialogState.add_task_text)
     await message.answer('📝 Напиши текст задачи, о которой нужно напомнить:')
 
 
-@dp.message(DialogState.add_task)
-async def process_add_task(message: Message, state: FSMContext):
+@dp.message(DialogState.add_task_text)
+async def process_answer_task_time(message: Message, state: FSMContext):
+    await state.update_data(task_text=message.text)
+    await state.set_state(DialogState.add_task_time)
+    await message.answer("⏳Теперь укажи время напоминания в формате:\n"
+                         "ДД.ММ.ГГГГ ЧЧ:ММ")
+
+
+@dp.message(DialogState.add_task_time)
+async def process_add_task_time(message: Message, state: FSMContext):
     user_id = str(message.chat.id)
+    data = await state.get_data()
     current_time = datetime.now() + timedelta(hours=3)
+    try:
+        task_time = datetime.strptime(message.text, "%d.%m.%Y %H:%M")
+    except ValueError:
+        await message.answer(
+            "❌ Неверный формат времени!\n"
+            "Пожалуйста, введите дату в формате ДД.ММ.ГГГГ ЧЧ:ММ\n")
+        return
+
     if user_id not in tasks:
         tasks[user_id] = []
     new_task = {
         "id": len(tasks[user_id]) + 1,
-        "text": str(message.text),
-        "time": current_time.strftime("%d.%m.%Y %H:%M")
+        "text": data['task_text'],
+        "time": current_time.strftime("%d.%m.%Y %H:%M"),
+        "task_time": task_time.strftime("%d.%m.%Y %H:%M")
     }
+    scheduler.add_job(
+        send_reminder,
+        trigger=DateTrigger(task_time),
+        args=(user_id, new_task['text']),
+        id=f"reminder_{user_id}_{new_task['id']}"
+    )
     tasks[str(user_id)].append(new_task)
     await state.clear()
     await message.answer(f"✅ Задача успешно добавлена!\n\n"
                          f"📌 Текст: {new_task['text']}\n"
-                         f"⏰ Время: {new_task['time']}")
-    await state.clear()
+                         f"⏰ Напоминание: {new_task['task_time']}")
 
 
 @dp.message(F.text == 'Удалить задачу ❌')
@@ -111,7 +150,10 @@ async def process_list_command(message: Message):
     for task in user_tasks:
         await message.answer(f'Задача № {task["id"]}\n\n'
                              f'📝Задача: {task["text"]}\n'
-                             f'⏳Время добавления: {task["time"]}')
+                             f'⏳Создана: {task["time"]}\n'
+                             f'⏰Напоминание: {task["task_time"]}')
 
 
-dp.run_polling(bot)
+if __name__ == '__main__':
+    dp.startup.register(on_startup)
+    dp.run_polling(bot)
