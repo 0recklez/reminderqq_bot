@@ -85,7 +85,7 @@ async def process_add_task_time(message: Message, state: FSMContext):
     data = await state.get_data()
     current_time = datetime.now() + timedelta(hours=3)
     try:
-        task_time = datetime.strptime(message.text, "%d.%m.%Y %H:%M") + timedelta(hours=3)
+        task_time = datetime.strptime(message.text, "%d.%m.%Y %H:%M")
     except ValueError:
         await message.answer(
             "❌ Неверный формат времени!\n"
@@ -102,7 +102,7 @@ async def process_add_task_time(message: Message, state: FSMContext):
     }
     scheduler.add_job(
         send_reminder,
-        trigger=DateTrigger(task_time),
+        trigger=DateTrigger(task_time + timedelta(hours=3)),
         args=(user_id, new_task['text']),
         id=f"reminder_{user_id}_{new_task['id']}"
     )
