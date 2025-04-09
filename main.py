@@ -102,10 +102,11 @@ async def process_add_task_time(message: Message, state: FSMContext):
     }
     scheduler.add_job(
         send_reminder,
-        trigger=DateTrigger(task_time + timedelta(hours=3)),
+        trigger=DateTrigger(task_time - timedelta(hours=3)),
         args=(user_id, new_task['text']),
         id=f"reminder_{user_id}_{new_task['id']}"
     )
+    print(task_time - timedelta(hours=3))
     tasks[str(user_id)].append(new_task)
     await state.clear()
     await message.answer(f"✅ Задача успешно добавлена!\n\n"
