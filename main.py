@@ -99,9 +99,11 @@ async def process_answer_task(message: Message, state: FSMContext):
 async def process_answer_task_time(message: Message, state: FSMContext):
     await state.update_data(task_text=message.text)
     await state.set_state(DialogState.add_task_time)
+    safe_locale = "ru_RU.utf8"
+    calendar = SimpleCalendar(locale=safe_locale)
     await message.answer(
         "📆 Выберите дату:",
-        reply_markup=await SimpleCalendar(locale=await get_user_locale(message.from_user)).start_calendar()
+        reply_markup=await calendar.start_calendar()
     )
 
 
