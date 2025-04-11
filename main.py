@@ -320,6 +320,17 @@ async def process_list_command(message: Message):
                              f'⏰Напоминание: {task["task_time"]}')
 
 
+@dp.message()
+async def other_message(message: Message):
+    await message.answer(
+        reply_markup=kb_builder.as_markup(
+            resize_keyboard=True,
+            one_time_keyboard=False,
+            input_field_placeholder='Выберите действие'
+        )
+    )
+
+
 if __name__ == '__main__':
     dp.startup.register(on_startup)
     dp.run_polling(bot)
