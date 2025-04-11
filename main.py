@@ -323,6 +323,7 @@ async def process_list_command(message: Message):
 @dp.message()
 async def other_message(message: Message):
     await message.answer(
+        text="Выбери действие в меню ниже 👇",
         reply_markup=kb_builder.as_markup(
             resize_keyboard=True,
             one_time_keyboard=False,
