@@ -113,7 +113,6 @@ async def process_simple_calendar(
         callback_data: CallbackData,
         state: FSMContext
 ):
-    user = callback_query.from_user
     safe_locale = "ru_RU.utf8"
 
     calendar = SimpleCalendar(locale=safe_locale, show_alerts=True)
@@ -171,7 +170,7 @@ async def process_select_minute(callback: CallbackQuery, state: FSMContext):
 
     scheduler.add_job(
         send_reminder,
-        trigger=DateTrigger(task_datetime),
+        trigger=DateTrigger(task_datetime + timedelta(hours=3)),
         args=(user_id, new_task["text"]),
         id=f"reminder_{user_id}_{new_task['id']}"
     )
