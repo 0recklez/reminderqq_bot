@@ -1,6 +1,7 @@
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, CallbackQuery, InlineKeyboardButton
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, CallbackQuery, InlineKeyboardButton, \
+    InlineKeyboardMarkup
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
@@ -35,6 +36,26 @@ class DialogState(StatesGroup):
     select_hour = State()
     select_minute = State()
     delete_task = State()
+
+
+def build_hour_keyboard():
+    buttons = [
+        InlineKeyboardButton(text=f"{h:02d}:00", callback_data=f"hour_{h}")
+        for h in range(24)
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=[
+        buttons[i:i + 4] for i in range(0, len(buttons), 4)
+    ])
+
+
+def build_minute_keyboard():
+    buttons = [
+        InlineKeyboardButton(text=f"{m:02d} мин", callback_data=f"min_{m}")
+        for m in range(0, 60, 5)
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=[
+        buttons[i:i + 4] for i in range(0, len(buttons), 4)
+    ])
 
 
 async def send_reminder(user_id: int, task_text: str):
@@ -99,41 +120,66 @@ async def process_simple_calendar(
     selected, date = await calendar.process_selection(callback_query, callback_data)
 
     if selected:
-        await state.update_data(task_time=date)
-        data = await state.get_data()
-        user_id = str(callback_query.message.chat.id)
-        task_text = data['task_text']
-        current_time = datetime.now() + timedelta(hours=3)
-        task_time = date
+        await state.update_data(task_date=date)
+        await state.set_state(DialogState.select_hour)
+        await callback_query.message.answer("🕐 Выберите час:", reply_markup=build_hour_keyboard())
 
-        if task_time < current_time:
-            await callback_query.message.answer("❌ Время должно быть в будущем!")
-            return
 
-        new_task = {
-            "id": len(tasks.get(user_id, [])) + 1,
-            "text": task_text,
-            "time": current_time.strftime("%d.%m.%Y %H:%M"),
-            "task_time": task_time.strftime("%d.%m.%Y %H:%M")
-        }
+@dp.callback_query(F.data.startswith("hour_"), DialogState.select_hour)
+async def process_select_hour(callback: CallbackQuery, state: FSMContext):
+    hour = int(callback.data.split("_")[1])
+    await state.update_data(hour=hour)
+    await state.set_state(DialogState.select_minute)
+    await callback.message.answer("🕑 Выберите минуты:", reply_markup=build_minute_keyboard())
 
-        if user_id not in tasks:
-            tasks[user_id] = []
-        tasks[user_id].append(new_task)
 
-        scheduler.add_job(
-            send_reminder,
-            trigger=DateTrigger(task_time - timedelta(hours=3)),
-            args=(user_id, new_task['text']),
-            id=f"reminder_{user_id}_{new_task['id']}"
-        )
+@dp.callback_query(F.data.startswith("min_"), DialogState.select_minute)
+async def process_select_minute(callback: CallbackQuery, state: FSMContext):
+    minute = int(callback.data.split("_")[1])
+    data = await state.get_data()
+    task_text = data["task_text"]
+    task_date = data["task_date"]
+    hour = data["hour"]
 
-        await state.clear()
-        await callback_query.message.answer(
-            f"✅ Задача успешно добавлена!\n\n"
-            f"📌 Текст: {new_task['text']}\n"
-            f"⏰ Напоминание: {new_task['task_time']}"
-        )
+    task_datetime = datetime(
+        year=task_date.year,
+        month=task_date.month,
+        day=task_date.day,
+        hour=hour,
+        minute=minute
+    )
+
+    user_id = str(callback.message.chat.id)
+    current_time = datetime.now()
+
+    if task_datetime < current_time:
+        await callback.message.answer("❌ Время должно быть в будущем!")
+        return
+
+    new_task = {
+        "id": len(tasks.get(user_id, [])) + 1,
+        "text": task_text,
+        "time": current_time.strftime("%d.%m.%Y %H:%M"),
+        "task_time": task_datetime.strftime("%d.%m.%Y %H:%M")
+    }
+
+    if user_id not in tasks:
+        tasks[user_id] = []
+    tasks[user_id].append(new_task)
+
+    scheduler.add_job(
+        send_reminder,
+        trigger=DateTrigger(task_datetime),
+        args=(user_id, new_task["text"]),
+        id=f"reminder_{user_id}_{new_task['id']}"
+    )
+
+    await state.clear()
+    await callback.message.answer(
+        f"✅ Задача успешно добавлена!\n\n"
+        f"📌 Текст: {new_task['text']}\n"
+        f"⏰ Напоминание: {new_task['task_time']}"
+    )
 
 
 @dp.message(F.text == 'Удалить задачу ❌')
