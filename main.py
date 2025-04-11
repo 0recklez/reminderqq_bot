@@ -170,7 +170,7 @@ async def process_select_minute(callback: CallbackQuery, state: FSMContext):
 
     scheduler.add_job(
         send_reminder,
-        trigger=DateTrigger(task_datetime + timedelta(hours=3)),
+        trigger=DateTrigger(task_datetime),
         args=(user_id, new_task["text"]),
         id=f"reminder_{user_id}_{new_task['id']}"
     )
