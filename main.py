@@ -114,9 +114,9 @@ async def process_simple_calendar(
         state: FSMContext
 ):
     user = callback_query.from_user
-    locale = await get_user_locale(user)
+    safe_locale = "ru_RU.utf8"
 
-    calendar = SimpleCalendar(locale=locale, show_alerts=True)
+    calendar = SimpleCalendar(locale=safe_locale, show_alerts=True)
     calendar.set_dates_range(datetime(2022, 1, 1), datetime(2025, 12, 31))
 
     selected, date = await calendar.process_selection(callback_query, callback_data)
