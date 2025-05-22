@@ -137,7 +137,7 @@ async def process_answer_task_time(message: Message, state: FSMContext):
 
 @dp.message(DialogState.choose_input_method)
 async def choose_input_method(message: Message, state: FSMContext):
-    await message.answer("✅ Ввод подтверждён", reply_markup=ReplyKeyboardRemove())
+    await message.answer("✅ Выбор подтверждён", reply_markup=ReplyKeyboardRemove())
     if message.text == "📆 Выбрать дату из календаря":
         await state.set_state(DialogState.add_task_time)
         calendar = SimpleCalendar(locale="ru_RU.utf8")
